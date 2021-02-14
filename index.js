@@ -147,8 +147,6 @@ class App {
         return new Container(el);
       });
 
-    this.setupMenu();
-
     this.ball = new Ball(document.querySelector('.ball'));
   };
 
