@@ -53,10 +53,91 @@ class Ball {
   };
 }
 
+class Menu {
+  constructor(el) {
+    this.el = el;
+    this.menu = el.querySelector('.menu');
+    this.plus = el.querySelector('.plus');
+    this.minus = el.querySelector('.minus');
+    this.start = el.querySelector('.start');
+    this.shuffleCount = el.querySelector('.count');
+  }
+
+  hide = () => {
+    this.el.style.display = 'none';
+  }
+
+  show = () => {
+    this.el.style.display = 'inherit';
+  }
+
+  setPlusClick = fn => {
+    this.plus.onclick = fn;
+  }
+
+  setMinusClick = fn => {
+    this.minus.onclick = fn;
+  }
+
+  setStartClick = fn => {
+    this.start.onclick = () => {
+      this.hide();
+      fn();
+    };
+  }
+
+  setShuffles = shuffles => {
+    this.shuffleCount.textContent = shuffles;
+  }
+}
+
+class Result {
+  constructor(el) {
+    this.el = el;
+    this.playAgain = this.el.querySelector('.playAgain');
+    this.goToMenu = this.el.querySelector('.goToMenu');
+    this.winMessage = this.el.querySelector('.win');
+    this.loseMessage = this.el.querySelector('.lose');
+  }
+
+  hide = () => {
+    this.el.style.display = 'none';
+    this.winMessage.style.display = 'none';
+    this.loseMessage.style.display = 'none';
+  }
+
+  show = (win) => {
+    this.el.style.display = 'inherit';
+
+    if (win) {
+      this.winMessage.style.display = 'block';
+    } else {
+      this.loseMessage.style.display = 'block';
+    }
+  }
+
+  setPlayAgainClick = fn => {
+    this.playAgain.onclick = () => {
+      this.hide();
+      fn();
+    };
+  }
+
+  setGoToMenuClick = fn => {
+    this.goToMenu.onclick = () => {
+      this.hide();
+      fn();
+    };
+  }
+}
+
 class App {
   constructor() {
     this.setupElements();
-    this.startGame();
+    this.setupMenu();
+    this.setupResult();
+    this.setInitialState();
+    this.shuffles = 5;
   }
 
   setupElements = () => {
@@ -66,10 +147,34 @@ class App {
         return new Container(el);
       });
 
+    this.setupMenu();
+
     this.ball = new Ball(document.querySelector('.ball'));
   };
 
+  setupMenu = () => {
+    this.menu = new Menu(document.querySelector('.menu'));
+
+    this.menu.setPlusClick(() => this.setShuffles(this.shuffles + 1));
+    this.menu.setMinusClick(() => this.setShuffles(this.shuffles - 1));
+    this.menu.setStartClick(() => this.startGame());
+  };
+
+  setShuffles = shuffles => {
+    this.shuffles = shuffles;
+    this.menu.setShuffles(shuffles);
+  };
+
+  setupResult = () => {
+    this.result = new Result(document.querySelector('.result'));
+
+    this.result.hide();
+    this.result.setPlayAgainClick(() => this.startGame());
+    this.result.setGoToMenuClick(() => this.menu.show());
+  }
+
   setInitialState = () => {
+    this.ball.hide();
     const ballPosition = Math.floor(Math.random() * 3);
 
     this.state = {
@@ -88,7 +193,7 @@ class App {
     );
   };
 
-  swapContainers = () => {
+  shuffleContainers = () => {
     return new Promise((resolve) => {
       const positions = [0, 1, 2];
       const posA = positions.splice(Math.floor(Math.random() * 3), 1).pop();
@@ -103,23 +208,43 @@ class App {
   };
 
   startGame = async () => {
-    this.setInitialState();
     this.state.isBusy = true;
+
+    this.ball.show();
+
     await this.containers[this.state.ballPosition].show();
-    await this.ball.hide();
-    await this.swapContainers();
-    await this.swapContainers();
-    await this.swapContainers();
+
+    this.ball.hide();
+
+    for (let i = 0; i < this.shuffles; i++) {
+      await this.shuffleContainers();
+    }
+
     this.state.isBusy = false;
   };
 
   pickContainer = async (pos) => {
-    if (this.state.isBusy) return;
+    if (this.state.isBusy) {
+      return;
+    }
+
     this.state.isBusy = true;
+
     const { order, ballPosition } = this.state;
+
     this.ball.show();
     this.ball.setPosition(order[ballPosition]);
-    await this.containers[pos].show();
+
+    await Promise.all(
+      [
+        this.containers[pos].show(),
+        ballPosition !== pos && this.containers[ballPosition].show(),
+      ]
+    );
+
+    this.result.show(ballPosition === pos);
+
+    this.setInitialState();
     this.state.isBusy = false;
   };
 }
