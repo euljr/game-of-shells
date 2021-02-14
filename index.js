@@ -137,7 +137,7 @@ class App {
     this.setupMenu();
     this.setupResult();
     this.setInitialState();
-    this.shuffles = 5;
+    this.setShuffles(5);
   }
 
   setupElements = () => {
